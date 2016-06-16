@@ -19,6 +19,7 @@ namespace SignalRTest1 {
 
         public List<string> messages;
         public List<string> toWrite;
+        public List<string> users;
 
         private TcpClient IrcConnection;
         private NetworkStream IrcStream;
@@ -33,12 +34,16 @@ namespace SignalRTest1 {
             IRCChannel = c;
             messages = new List<string>();
             toWrite = new List<string>();
+            users = new List<string>();
         }
 
         public void Connect() {
             try {
                 string read = "";
                 bool connected = false;
+
+                //need to wait here for hub to come online first!
+                //TODO
 
                 //Connect to server
                 IrcConnection = new TcpClient(IRCServer, IRCPort);
@@ -87,7 +92,21 @@ namespace SignalRTest1 {
                     }
                     if (read.Contains(IRCChannel)) {
                         connected = true;
+                    }
+                    if (read.Contains(" 353 ")) {
+                        List<string> names = read.Split(' ').ToList();
+                        names.RemoveAt(0);
+                        names.RemoveAt(0);
+                        names.RemoveAt(0);
+                        names.RemoveAt(0);
+                        names.RemoveAt(0);
+                        names.RemoveAt(0);
+                        names.RemoveAt(names.IndexOf(names.Last()));                        
 
+                        names.ForEach((x) => {
+                            users.Add(x);
+                            GlobalHost.ConnectionManager.GetHubContext<ChatHub>().Clients.All.broadcastUser(x);
+                        });
                     }
                 }
                 if (toWrite.Count != 0) {
